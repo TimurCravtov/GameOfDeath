@@ -1,23 +1,17 @@
-using UnityEngine;
 using System;
+using UnityEngine;
 
 public class Zone : MonoBehaviour
 {
-    public string Name { get; set; }
-    public (float X, float Y) TopLeft { get; set; }
-    public (float X, float Y) BottomRight { get; set; }
+    public string test;
+    public string Name;
 
-    public Zone(string name, float topLeftX, float topLeftY, float bottomRightX, float bottomRightY)
+    public Vector2 TopLeft;
+    public Vector2 BottomRight;
+
+    public bool IsInZone(float x, float y)
     {
-        Name = name;
-        TopLeft = (topLeftX, topLeftY);
-        BottomRight = (bottomRightX, bottomRightY);
+        return x >= TopLeft.x && x <= BottomRight.x &&
+               y <= TopLeft.y && y >= BottomRight.y;
     }
-
-    public static bool IsInZone(Zone z, float x, float y)
-    {
-        return x >= z.TopLeft.X && x <= z.BottomRight.X &&
-               y <= z.TopLeft.Y && y >= z.BottomRight.Y;
-    }
-
 }
