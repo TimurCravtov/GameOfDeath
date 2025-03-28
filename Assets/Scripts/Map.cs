@@ -5,7 +5,11 @@ using UnityEngine;
 public class Map : MonoBehaviour
 {
     public int width = 20;
+
     public int height = 20;
+
+    public Zone zone1;
+    public Zone zone2;
 
     private GameOfLifeCellType[,] cells; // Removed property syntax, needs initialization
 
@@ -29,7 +33,7 @@ public class Map : MonoBehaviour
 
     private void Update()
     {
-        
+
     }
 
     void UpdateCellVisual(int x, int y)
