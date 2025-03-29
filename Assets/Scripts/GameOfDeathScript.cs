@@ -2,20 +2,27 @@ using System;
 using UnityEditor.U2D.Aseprite;
 using UnityEngine;
 
-public class Map : MonoBehaviour
+public class GameOfDeath : MonoBehaviour
 {
-    public int width = 20;
 
+    [Header("Grid settings")]
+    public int width = 20;
     public int height = 20;
 
+    [Header("Cells settings")]
+    public GameObject cellPrefab;
+
+
+    [Header("Zone settings")]
     public Zone zone1;
     public Zone zone2;
 
-    private GameOfLifeCellType[,] cells; // Removed property syntax, needs initialization
+
+    private GameOfLifeCellType[,] cells;
 
     void Start()
     {
-        cells = new GameOfLifeCellType[width, height]; // Initialize the array
+        cells = new GameOfLifeCellType[width, height];
         InitializeGrid();
     }
 
@@ -53,6 +60,7 @@ public class Map : MonoBehaviour
         }
     }
 }
+
 
 enum GameOfLifeCellType
 {

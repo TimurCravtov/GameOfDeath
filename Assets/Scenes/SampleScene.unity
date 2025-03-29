@@ -206,6 +206,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   width: 20
   height: 20
+  zone1: {fileID: 928490467}
+  zone2: {fileID: 928490467}
 --- !u!1 &361988616
 GameObject:
   m_ObjectHideFlags: 0
@@ -679,11 +681,11 @@ RectTransform:
   - {fileID: 1481175337}
   - {fileID: 2121749787}
   - {fileID: 2053878862}
+  - {fileID: 1752860090}
   - {fileID: 361988617}
   - {fileID: 759795998}
   - {fileID: 738393912}
   - {fileID: 1439195094}
-  - {fileID: 1752860090}
   - {fileID: 928490466}
   m_Father: {fileID: 519420032}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -804,7 +806,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   test: 
-  Name: 
+  Name: Slytherin Dormitory
   TopLeft: {x: 0, y: 0}
   BottomRight: {x: 0, y: 0}
 --- !u!1 &1439195093
