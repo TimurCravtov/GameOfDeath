@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
+using GameOfLife.CellSystem;
 
 public class GameOfDeath : MonoBehaviour
 {
@@ -16,24 +18,24 @@ public class GameOfDeath : MonoBehaviour
     public GameObject volandemortPrefab;
     public GameObject dubledorePrefab;
 
+    // Maps each cell type to its corresponding prefab for easy instantiation
+    private Dictionary<GameOfLifeCellType, GameObject> prefabMap;
 
-
+    void Start()
+    {
+        prefabMap = new Dictionary<GameOfLifeCellType, GameObject>
+        {
+            { GameOfLifeCellType.GRYFFINDOR, gryffindorPrefab },
+            { GameOfLifeCellType.SLYTHERIN, slytherinPrefab },
+            { GameOfLifeCellType.HUFFLEPUFF, hufflepuffPrefab },
+            { GameOfLifeCellType.RAVENCLAW, ravenclawPrefab },
+            { GameOfLifeCellType.DUMBLEDORE, dubledorePrefab },
+            { GameOfLifeCellType.VOLDEMORT, volandemortPrefab }
+        };
+    }
 
     void Update()
     {
-       
+
     }
-
-}
-
-public enum GameOfLifeCellType
-{
-    DEAD,
-    ALIVE
-}
-
-
-class CellInfoOnMap
-{
-
 }
