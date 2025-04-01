@@ -71,6 +71,16 @@ public class GameOfDeath : MonoBehaviour
 
     void Update()
     {
+
+        // Check for reset key press
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            clearGrid();
+            currentGenerationGrid = null;
+            nextGenerationGrid = null;
+            Start();
+        }
+        // Check for mouse click
         if (Input.GetMouseButtonDown(0))
         {
             Vector2 mousePosition = Input.mousePosition;
@@ -82,23 +92,57 @@ public class GameOfDeath : MonoBehaviour
                 Debug.Log($"Cell clicked at grid position: ({cellPosition.x}, {cellPosition.y})");
                 Debug.Log($"Cell type: {clickedCell.Type}");
 
-                if (clickedCell.Type == GameOfLifeCellType.DEAD)
+                // Spawn the selected cell type based on the key press
+                if (Input.GetKey(KeyCode.Alpha1))
                 {
                     SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.GRYFFINDOR);
                 }
-                else
+                else if (Input.GetKey(KeyCode.Alpha2))
                 {
-                    SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.DEAD);
+                    SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.SLYTHERIN);
+                }
+                else if (Input.GetKey(KeyCode.Alpha3))
+                {
+                    SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.HUFFLEPUFF);
+                }
+                else if (Input.GetKey(KeyCode.Alpha4))
+                {
+                    SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.RAVENCLAW);
+                }
+                else if (Input.GetKey(KeyCode.Alpha5))
+                {
+                    SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.VOLDEMORT);
                 }
             }
+
             else
             {
                 Debug.Log("Click detected outside the grid area");
             }
         }
+        if (Input.GetMouseButtonDown(1)) {
+            Debug.Log("Click detected");
+            Vector2 mousePosition = Input.mousePosition;
+            CellInfoOnMap clickedCell = GetCellByCoordinates(mousePosition.x, mousePosition.y);
+            Vector2Int cellPosition = clickedCell.GridPosition;
+            SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.DEAD);
+
+        }
+
+        // Update the simulation for the next generation (if needed)
         UpdateGeneration();
     }
 
+    void clearGrid()
+    {
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                SpawnCell(x, y, GameOfLifeCellType.DEAD);
+            }
+        }
+    }
     private Vector2Int GetCellIndexesByCoordinates(float x, float y)
     {
         // Screen coordinates: (0,1080) top-left, (1920,0) bottom-right
@@ -172,7 +216,8 @@ public class GameOfDeath : MonoBehaviour
                 currentGenerationGrid[x, y] = new CellInfoOnMap
                 {
                     Type = GameOfLifeCellType.DEAD,
-                    GridPosition = new Vector2Int(x, y)
+                    GridPosition = new Vector2Int(x, y),
+                    Instance = null
                 };
             }
         }
@@ -228,27 +273,26 @@ public class GameOfDeath : MonoBehaviour
         float posY = gridStartPosition.y - y * cellSpacing.y; // Y decreases downward from top
         return new Vector2(posX, posY);
     }
-
     public void SpawnCell(int x, int y, GameOfLifeCellType type)
     {
         if (x < 0 || x >= width || y < 0 || y >= height)
             return;
-
-        CellInfoOnMap cell = currentGenerationGrid[x, y];
-
-        if (cell.Instance != null)
-        {
-            Destroy(cell.Instance);
+        if (currentGenerationGrid[x, y].Instance != null) {
+            Destroy(currentGenerationGrid[x, y].Instance);
+            currentGenerationGrid[x, y].Instance = null;
         }
-
-        cell.Type = type;
 
         if (type != GameOfLifeCellType.DEAD && prefabMap.ContainsKey(type))
         {
             Vector2 position = CalculateCellPosition(x, y);
-            cell.Instance = Instantiate(prefabMap[type], cellContainer);
+            currentGenerationGrid[x, y] = new CellInfoOnMap
+            {
+                GridPosition = new Vector2Int(x, y),
+                Type = type,
+                Instance = Instantiate(prefabMap[type], cellContainer)
+            };
 
-            RectTransform rectTransform = cell.Instance.GetComponent<RectTransform>();
+            RectTransform rectTransform = currentGenerationGrid[x, y].Instance.GetComponent<RectTransform>();
             if (rectTransform != null)
             {
                 rectTransform.anchoredPosition = position;
@@ -257,14 +301,17 @@ public class GameOfDeath : MonoBehaviour
             else
             {
                 Debug.LogWarning($"Cell prefab {type} doesn't have a RectTransform component.");
-                cell.Instance.transform.localPosition = new Vector3(position.x, position.y, 0);
+                currentGenerationGrid[x, y].Instance.transform.localPosition = new Vector3(position.x, position.y, 0);
             }
+
         }
         else
         {
-            cell.Instance = null;
+            Debug.Log("Null instance");
+            currentGenerationGrid[x, y].Instance = null;
         }
     }
+
 
     private void OnDrawGizmos()
     {
@@ -286,19 +333,25 @@ public class GameOfDeath : MonoBehaviour
     private void UpdateGeneration()
     {
         // Initialize nextGenerationGrid
-        nextGenerationGrid = currentGenerationGrid;
-
+        nextGenerationGrid = new CellInfoOnMap[width, height];
+        for (int i = 0; i < width; i++)
+        {
+            for (int j = 0; j < height; j++)
+            {
+                nextGenerationGrid[i, j] = new CellInfoOnMap
+                {
+                    GridPosition = currentGenerationGrid[i, j].GridPosition,
+                    Type = currentGenerationGrid[i, j].Type,
+                    Instance = null
+                };
+            }
+        }
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
                 CellInfoOnMap currentCell = currentGenerationGrid[x, y];
-                CellInfoOnMap newCell = new CellInfoOnMap
-                {
-                    GridPosition = new Vector2Int(x, y),
-                    // Default to current type; rules below may override it.
-                    Type = currentCell.Type
-                };
+                CellInfoOnMap newCell = nextGenerationGrid[x, y];
 
                 // Count neighbors for this cell
                 Dictionary<GameOfLifeCellType, int> neighborCount = CountNeighbors(x, y);
@@ -400,17 +453,14 @@ public class GameOfDeath : MonoBehaviour
                 nextGenerationGrid[x, y] = newCell;
             }
         }
-
-        // Replace the current generation with the next.
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
-                CellInfoOnMap cell = currentGenerationGrid[x, y];
+                CellInfoOnMap cell = nextGenerationGrid[x, y];
                 SpawnCell(x, y, cell.Type);
             }
         }
-        currentGenerationGrid = nextGenerationGrid;
     }
 
     // Helper: Count neighbor types for cell at (x,y)
