@@ -10,8 +10,7 @@ public class GameOfDeath : MonoBehaviour
     public int width = 48;
     public int height = 24;
 
-    private int cellSize = 1920 / 48; 
-
+    private int cellSize = 1920 / 48;
 
     [Header("Cells Prefabs settings")]
     public GameObject gryffindorPrefab;
@@ -26,38 +25,34 @@ public class GameOfDeath : MonoBehaviour
     public RectTransform cellContainer;
 
     [Header("Grid Positioning")]
-    public Vector2 gridOffset = Vector2.zero; // Optional offset for the entire grid
-    public bool centerGridInContainer = true; // Whether to center the grid in the container
+    public Vector2 gridOffset = Vector2.zero;
+    public bool centerGridInContainer = true;
 
     [Header("Random Generation Settings")]
     [Range(0f, 1f)]
     public float initialFillPercentage = 0.3f;
 
-    // Grid of cells
-    private CellInfoOnMap[,] grid;
-    // Maps each cell type to its corresponding prefab for easy instantiation
+    private CellInfoOnMap[,] currentGenerationGrid;
+    private CellInfoOnMap[,] nextGenerationGrid;
+
     private Dictionary<GameOfLifeCellType, GameObject> prefabMap;
-    // Calculated positioning values
     private Vector2 cellSpacing;
     private Vector2 gridStartPosition;
 
     void Start()
     {
-        // Validate canvas reference
         if (gameCanvas == null)
         {
             Debug.LogError("Canvas reference is missing! Please assign a canvas in the inspector.");
             return;
         }
 
-        // If cellContainer is not assigned, use the canvas's transform
         if (cellContainer == null)
         {
             cellContainer = gameCanvas.GetComponent<RectTransform>();
             Debug.Log("Cell container not assigned, using canvas as container.");
         }
 
-        // Set up prefab dictionary
         prefabMap = new Dictionary<GameOfLifeCellType, GameObject>
         {
             { GameOfLifeCellType.GRYFFINDOR, gryffindorPrefab },
@@ -68,69 +63,118 @@ public class GameOfDeath : MonoBehaviour
             { GameOfLifeCellType.VOLDEMORT, volandemortPrefab }
         };
 
-        // Calculate positioning for the grid
         CalculateGridPositioning();
-
-        // Initialize grid
         InitializeGrid();
-
-        // Populate with random cells
         PopulateRandomCells();
+    }
+
+    void Update()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            Vector2 mousePosition = Input.mousePosition;
+            CellInfoOnMap clickedCell = GetCellByCoordinates(mousePosition.x, mousePosition.y);
+
+            if (clickedCell != null)
+            {
+                Vector2Int cellPosition = clickedCell.GridPosition;
+                Debug.Log($"Cell clicked at grid position: ({cellPosition.x}, {cellPosition.y})");
+                Debug.Log($"Cell type: {clickedCell.Type}");
+
+                if (clickedCell.Type == GameOfLifeCellType.DEAD)
+                {
+                    SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.GRYFFINDOR);
+                }
+                else
+                {
+                    SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.DEAD);
+                }
+            }
+            else
+            {
+                Debug.Log("Click detected outside the grid area");
+            }
+        }
+    }
+
+    private Vector2Int GetCellIndexesByCoordinates(float x, float y)
+    {
+        // Screen coordinates: (0,1080) top-left, (1920,0) bottom-right
+        // Grid coordinates: (0,0) top-left, (47,23) bottom-right (after flip)
+
+        float gridWidth = width * cellSize;
+        float gridHeight = height * cellSize;
+
+        // Calculate screen-space position of grid based on centered placement
+        float gridLeft = (1920f / 2) - (gridWidth / 2) + gridOffset.x;
+        float gridTop = (1080f / 2) + (gridHeight / 2) + gridOffset.y; // Top edge NOT adjusted for cell size
+
+        // Convert mouse position to grid-relative position
+        float relativeX = x - gridLeft;
+        float relativeY = gridTop - y; // Y decreases downward in screen space, so invert
+
+        // Convert to grid indices
+        int gridX = Mathf.FloorToInt(relativeX / cellSize);
+        int gridY = Mathf.FloorToInt(relativeY / cellSize);
+
+        // Check bounds
+        if (gridX >= 0 && gridX < width && gridY >= 0 && gridY < height)
+        {
+            return new Vector2Int(gridX, gridY);
+        }
+
+        return new Vector2Int(-1, -1);
+    }
+
+    private CellInfoOnMap GetCellByCoordinates(float x, float y)
+    {
+        Vector2Int position = GetCellIndexesByCoordinates(x, y);
+
+        if (position.x >= 0 && position.y >= 0 &&
+            position.x < width && position.y < height)
+        {
+            return currentGenerationGrid[position.x, position.y];
+        }
+
+        return null;
     }
 
     private void CalculateGridPositioning()
     {
-        // Calculate the spacing between cells (accounting for size)
         cellSpacing = new Vector2(cellSize, cellSize);
-
-        // Calculate the total grid size
         float totalGridWidth = width * cellSpacing.x;
         float totalGridHeight = height * cellSpacing.y;
 
-        // Determine the starting position
         if (centerGridInContainer)
         {
-            // Get the size of the container
             Vector2 containerSize = cellContainer.rect.size;
-
-            // Calculate the starting position to center the grid
             float startX = -totalGridWidth / 2 + cellSpacing.x / 2;
-            float startY = -totalGridHeight / 2 + cellSpacing.y / 2;
-
+            float startY = totalGridHeight / 2 - cellSpacing.y / 2; // Start from top, adjusted for cell size
             gridStartPosition = new Vector2(startX, startY) + gridOffset;
         }
         else
         {
-            // If not centering, use the offset as the starting position
             gridStartPosition = gridOffset;
         }
 
         Debug.Log($"Grid positioning calculated. Start: {gridStartPosition}, Spacing: {cellSpacing}");
     }
 
-    void Update()
-    {
-        // Add game update logic here
-    }
-
     private void InitializeGrid()
     {
-        // Create the grid
-        grid = new CellInfoOnMap[width, height];
-        // Initialize each cell in the grid
+        currentGenerationGrid = new CellInfoOnMap[width, height];
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
-                // Create a new cell
-                grid[x, y] = new CellInfoOnMap
+                currentGenerationGrid[x, y] = new CellInfoOnMap
                 {
                     Type = GameOfLifeCellType.DEAD,
                     GridPosition = new Vector2Int(x, y)
                 };
             }
         }
-        // Set up neighbors for each cell
+
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
@@ -143,40 +187,26 @@ public class GameOfDeath : MonoBehaviour
     private void PopulateRandomCells()
     {
         System.Random random = new System.Random();
-
-        // Get the number of cell types (excluding DEAD)
         int cellTypeCount = Enum.GetValues(typeof(GameOfLifeCellType)).Length - 1;
-
-        // Calculate how many cells to fill based on the percentage
         int cellsToFill = Mathf.RoundToInt(width * height * initialFillPercentage);
 
         for (int i = 0; i < cellsToFill; i++)
         {
-            // Pick random coordinates
             int x = random.Next(0, width);
             int y = random.Next(0, height);
-
-            // Pick a random cell type (excluding DEAD which is usually 0)
             int randomTypeIndex = random.Next(1, cellTypeCount + 1);
             GameOfLifeCellType randomType = (GameOfLifeCellType)randomTypeIndex;
-
-            // Spawn the cell
             SpawnCell(x, y, randomType);
         }
     }
 
     private void SetupNeighbors(int x, int y)
     {
-        CellInfoOnMap cell = grid[x, y];
-        // Top neighbor
+        CellInfoOnMap cell = currentGenerationGrid[x, y];
         cell.Top = GetCellAt(x, y + 1);
-        // Bottom neighbor
         cell.Bottom = GetCellAt(x, y - 1);
-        // Left neighbor
         cell.Left = GetCellAt(x - 1, y);
-        // Right neighbor
         cell.Right = GetCellAt(x + 1, y);
-        // Diagonal neighbors
         cell.TopLeft = GetCellAt(x - 1, y + 1);
         cell.TopRight = GetCellAt(x + 1, y + 1);
         cell.BottomLeft = GetCellAt(x - 1, y - 1);
@@ -185,18 +215,15 @@ public class GameOfDeath : MonoBehaviour
 
     private CellInfoOnMap GetCellAt(int x, int y)
     {
-        // Handle wrapping or boundary conditions
         if (x < 0 || x >= width || y < 0 || y >= height)
-            return null; // Or implement wrapping if desired
-        return grid[x, y];
+            return null;
+        return currentGenerationGrid[x, y];
     }
 
     public Vector2 CalculateCellPosition(int x, int y)
     {
-        // Calculate the position based on the grid start and spacing
         float posX = gridStartPosition.x + x * cellSpacing.x;
-        float posY = gridStartPosition.y + y * cellSpacing.y;
-
+        float posY = gridStartPosition.y - y * cellSpacing.y; // Y decreases downward from top
         return new Vector2(posX, posY);
     }
 
@@ -205,44 +232,38 @@ public class GameOfDeath : MonoBehaviour
         if (x < 0 || x >= width || y < 0 || y >= height)
             return;
 
-        CellInfoOnMap cell = grid[x, y];
+        CellInfoOnMap cell = currentGenerationGrid[x, y];
 
-        // Destroy previous instance if it exists
         if (cell.Instance != null)
         {
             Destroy(cell.Instance);
         }
 
-        // Set new cell type
         cell.Type = type;
 
-        // If it's not dead, instantiate the appropriate prefab
         if (type != GameOfLifeCellType.DEAD && prefabMap.ContainsKey(type))
         {
-            // Calculate the proper position for this cell within the grid
             Vector2 position = CalculateCellPosition(x, y);
-
-            // Instantiate the cell as a child of the canvas or container
             cell.Instance = Instantiate(prefabMap[type], cellContainer);
 
-            // Set the local position within the UI
             RectTransform rectTransform = cell.Instance.GetComponent<RectTransform>();
             if (rectTransform != null)
             {
                 rectTransform.anchoredPosition = position;
-
-                // Optionally ensure the cell size is set correctly
                 rectTransform.sizeDelta = new Vector2(cellSize, cellSize);
             }
             else
             {
-                Debug.LogWarning($"Cell prefab {type} doesn't have a RectTransform component. UI positioning may not work correctly.");
+                Debug.LogWarning($"Cell prefab {type} doesn't have a RectTransform component.");
                 cell.Instance.transform.localPosition = new Vector3(position.x, position.y, 0);
             }
         }
+        else
+        {
+            cell.Instance = null;
+        }
     }
 
-    // For debugging - visualize the grid in the scene view
     private void OnDrawGizmos()
     {
         if (!Application.isPlaying)
@@ -259,6 +280,4 @@ public class GameOfDeath : MonoBehaviour
             }
         }
     }
-
-    // Additional methods for game logic...
 }
