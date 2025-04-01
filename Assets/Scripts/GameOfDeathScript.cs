@@ -39,7 +39,7 @@ public class GameOfDeath : MonoBehaviour
     private Dictionary<GameOfLifeCellType, GameObject> prefabMap;
     private Vector2 cellSpacing;
     private Vector2 gridStartPosition;
-
+    private bool startSimulation = false;
     void Start()
     {
         if (gameCanvas == null)
@@ -79,58 +79,67 @@ public class GameOfDeath : MonoBehaviour
             currentGenerationGrid = null;
             nextGenerationGrid = null;
             Start();
+            startSimulation = false;
         }
-        // Check for mouse click
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetKeyDown(KeyCode.Space))
         {
-            Vector2 mousePosition = Input.mousePosition;
-            CellInfoOnMap clickedCell = GetCellByCoordinates(mousePosition.x, mousePosition.y);
-
-            if (clickedCell != null)
+            startSimulation = true;
+        }
+        if (startSimulation)
+        {
+            UpdateGeneration();
+        }
+        else {
+            // Check for mouse click
+            if (Input.GetMouseButtonDown(0))
             {
+                Vector2 mousePosition = Input.mousePosition;
+                CellInfoOnMap clickedCell = GetCellByCoordinates(mousePosition.x, mousePosition.y);
+
+                if (clickedCell != null)
+                {
+                    Vector2Int cellPosition = clickedCell.GridPosition;
+                    Debug.Log($"Cell clicked at grid position: ({cellPosition.x}, {cellPosition.y})");
+                    Debug.Log($"Cell type: {clickedCell.Type}");
+
+                    // Spawn the selected cell type based on the key press
+                    if (Input.GetKey(KeyCode.Alpha1))
+                    {
+                        SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.GRYFFINDOR);
+                    }
+                    else if (Input.GetKey(KeyCode.Alpha2))
+                    {
+                        SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.SLYTHERIN);
+                    }
+                    else if (Input.GetKey(KeyCode.Alpha3))
+                    {
+                        SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.HUFFLEPUFF);
+                    }
+                    else if (Input.GetKey(KeyCode.Alpha4))
+                    {
+                        SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.RAVENCLAW);
+                    }
+                    else if (Input.GetKey(KeyCode.Alpha5))
+                    {
+                        SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.VOLDEMORT);
+                    }
+                }
+
+                else
+                {
+                    Debug.Log("Click detected outside the grid area");
+                }
+            }
+            if (Input.GetMouseButtonDown(1)) {
+                Debug.Log("Click detected");
+                Vector2 mousePosition = Input.mousePosition;
+                CellInfoOnMap clickedCell = GetCellByCoordinates(mousePosition.x, mousePosition.y);
                 Vector2Int cellPosition = clickedCell.GridPosition;
-                Debug.Log($"Cell clicked at grid position: ({cellPosition.x}, {cellPosition.y})");
-                Debug.Log($"Cell type: {clickedCell.Type}");
+                SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.DEAD);
 
-                // Spawn the selected cell type based on the key press
-                if (Input.GetKey(KeyCode.Alpha1))
-                {
-                    SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.GRYFFINDOR);
-                }
-                else if (Input.GetKey(KeyCode.Alpha2))
-                {
-                    SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.SLYTHERIN);
-                }
-                else if (Input.GetKey(KeyCode.Alpha3))
-                {
-                    SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.HUFFLEPUFF);
-                }
-                else if (Input.GetKey(KeyCode.Alpha4))
-                {
-                    SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.RAVENCLAW);
-                }
-                else if (Input.GetKey(KeyCode.Alpha5))
-                {
-                    SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.VOLDEMORT);
-                }
-            }
-
-            else
-            {
-                Debug.Log("Click detected outside the grid area");
             }
         }
-        if (Input.GetMouseButtonDown(1)) {
-            Debug.Log("Click detected");
-            Vector2 mousePosition = Input.mousePosition;
-            CellInfoOnMap clickedCell = GetCellByCoordinates(mousePosition.x, mousePosition.y);
-            Vector2Int cellPosition = clickedCell.GridPosition;
-            SpawnCell(cellPosition.x, cellPosition.y, GameOfLifeCellType.DEAD);
-
-        }
-
         // Update the simulation for the next generation (if needed)
-        UpdateGeneration();
     }
 
     void clearGrid()
