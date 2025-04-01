@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using GameOfLife.CellSystem;
+using System.Data;
 
 public class GameOfDeath : MonoBehaviour
 {
@@ -95,6 +96,7 @@ public class GameOfDeath : MonoBehaviour
                 Debug.Log("Click detected outside the grid area");
             }
         }
+        UpdateGeneration();
     }
 
     private Vector2Int GetCellIndexesByCoordinates(float x, float y)
@@ -277,6 +279,254 @@ public class GameOfDeath : MonoBehaviour
                 Vector2 pos = CalculateCellPosition(x, y);
                 Vector3 worldPos = cellContainer.TransformPoint(new Vector3(pos.x, pos.y, 0));
                 Gizmos.DrawWireCube(worldPos, new Vector3(cellSize * 0.9f, cellSize * 0.9f, 0.01f));
+            }
+        }
+    }
+    // Call this every simulation cycle to compute the next generation.
+    private void UpdateGeneration()
+    {
+        // Initialize nextGenerationGrid
+        nextGenerationGrid = currentGenerationGrid;
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                CellInfoOnMap currentCell = currentGenerationGrid[x, y];
+                CellInfoOnMap newCell = new CellInfoOnMap
+                {
+                    GridPosition = new Vector2Int(x, y),
+                    // Default to current type; rules below may override it.
+                    Type = currentCell.Type
+                };
+
+                // Count neighbors for this cell
+                Dictionary<GameOfLifeCellType, int> neighborCount = CountNeighbors(x, y);
+
+                // --- Hogwarts House Cells Rules ---
+                if (IsHouseCell(currentCell.Type))
+                {
+                    // Survival rule: if 2-3 same house neighbors, cell survives.
+                    int sameHouse = neighborCount.ContainsKey(currentCell.Type) ? neighborCount[currentCell.Type] : 0;
+                    if (!(sameHouse >= 2 && sameHouse <= 3))
+                    {
+                        // Also check if the cell is overwhelmed by diversity
+                        int distinctHouseTypes = 0;
+                        foreach (var kv in neighborCount)
+                        {
+                            if (IsHouseCell(kv.Key))
+                            {
+                                distinctHouseTypes++;
+                            }
+                        }
+                        if (distinctHouseTypes > 4)
+                        {
+                            newCell.Type = GameOfLifeCellType.DEAD;
+                        }
+                    }
+                    // Rivalry: Gryffindor vs. Slytherin
+                    if (currentCell.Type == GameOfLifeCellType.GRYFFINDOR)
+                    {
+                        int slythCount = neighborCount.ContainsKey(GameOfLifeCellType.SLYTHERIN) ? neighborCount[GameOfLifeCellType.SLYTHERIN] : 0;
+                        if (slythCount > 4)
+                        {
+                            newCell.Type = GameOfLifeCellType.DEAD;
+                        }
+                    }
+                    if (currentCell.Type == GameOfLifeCellType.SLYTHERIN)
+                    {
+                        int gryffCount = neighborCount.ContainsKey(GameOfLifeCellType.GRYFFINDOR) ? neighborCount[GameOfLifeCellType.GRYFFINDOR] : 0;
+                        if (gryffCount > 4)
+                        {
+                            newCell.Type = GameOfLifeCellType.DEAD;
+                        }
+                    }
+                    // Hufflepuff is preyed upon by Slytherin.
+                    if (currentCell.Type == GameOfLifeCellType.HUFFLEPUFF)
+                    {
+                        int slythCount = neighborCount.ContainsKey(GameOfLifeCellType.SLYTHERIN) ? neighborCount[GameOfLifeCellType.SLYTHERIN] : 0;
+                        if (slythCount >= 2)
+                        {
+                            newCell.Type = GameOfLifeCellType.DEAD;
+                        }
+                    }
+                }
+                // --- Dumbledore Rules ---
+                else if (currentCell.Type == GameOfLifeCellType.DUMBLEDORE)
+                {
+                    int voldCount = neighborCount.ContainsKey(GameOfLifeCellType.VOLDEMORT) ? neighborCount[GameOfLifeCellType.VOLDEMORT] : 0;
+                    int slythCount = neighborCount.ContainsKey(GameOfLifeCellType.SLYTHERIN) ? neighborCount[GameOfLifeCellType.SLYTHERIN] : 0;
+                    // Dumbledore dies if there’s any Voldemort or too many Slytherins.
+                    if (voldCount >= 1 || slythCount > 5)
+                    {
+                        newCell.Type = GameOfLifeCellType.DEAD;
+                    }
+                    else
+                    {
+                        // Remains as Dumbledore.
+                        newCell.Type = GameOfLifeCellType.DUMBLEDORE;
+                        // Attempt to revive any dead neighbors (50% chance per dead neighbor).
+                        ReviveDeadNeighbors(x, y);
+                    }
+                }
+                // --- Voldemort Rules ---
+                else if (currentCell.Type == GameOfLifeCellType.VOLDEMORT)
+                {
+                    int dumbledoreCount = neighborCount.ContainsKey(GameOfLifeCellType.DUMBLEDORE) ? neighborCount[GameOfLifeCellType.DUMBLEDORE] : 0;
+                    // Voldemort dies if surrounded by three or more Dumbledore cells.
+                    if (dumbledoreCount >= 3)
+                    {
+                        newCell.Type = GameOfLifeCellType.DEAD;
+                    }
+                    else
+                    {
+                        newCell.Type = GameOfLifeCellType.VOLDEMORT;
+                        // Transform any neighboring Hogwarts house cell (except Slytherin) into Voldemort.
+                        TransformHogwartsNeighbors(x, y);
+                    }
+                }
+                // --- Revival for Dead Cells via Ravenclaw/Hufflepuff Interaction ---
+                else if (currentCell.Type == GameOfLifeCellType.DEAD)
+                {
+                    int ravenCount = neighborCount.ContainsKey(GameOfLifeCellType.RAVENCLAW) ? neighborCount[GameOfLifeCellType.RAVENCLAW] : 0;
+                    int huffleCount = neighborCount.ContainsKey(GameOfLifeCellType.HUFFLEPUFF) ? neighborCount[GameOfLifeCellType.HUFFLEPUFF] : 0;
+                    if (ravenCount > 0 && huffleCount > 0 && UnityEngine.Random.value < 0.3f)
+                    {
+                        newCell.Type = GameOfLifeCellType.RAVENCLAW;
+                    }
+                }
+
+                // Assign the new cell into the next generation grid.
+                nextGenerationGrid[x, y] = newCell;
+            }
+        }
+
+        // Replace the current generation with the next.
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                CellInfoOnMap cell = currentGenerationGrid[x, y];
+                SpawnCell(x, y, cell.Type);
+            }
+        }
+        currentGenerationGrid = nextGenerationGrid;
+    }
+
+    // Helper: Count neighbor types for cell at (x,y)
+    private Dictionary<GameOfLifeCellType, int> CountNeighbors(int x, int y)
+    {
+        Dictionary<GameOfLifeCellType, int> counts = new Dictionary<GameOfLifeCellType, int>();
+
+        // List of all 8 possible neighbor positions.
+        Vector2Int[] neighborOffsets = new Vector2Int[]
+        {
+            new Vector2Int(-1,  1), new Vector2Int(0,  1), new Vector2Int(1,  1),
+            new Vector2Int(-1,  0),                      new Vector2Int(1,  0),
+            new Vector2Int(-1, -1), new Vector2Int(0, -1), new Vector2Int(1, -1)
+        };
+
+        foreach (Vector2Int offset in neighborOffsets)
+        {
+            int nx = x + offset.x;
+            int ny = y + offset.y;
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height)
+            {
+                GameOfLifeCellType neighborType = currentGenerationGrid[nx, ny].Type;
+                if (counts.ContainsKey(neighborType))
+                {
+                    counts[neighborType]++;
+                }
+                else
+                {
+                    counts[neighborType] = 1;
+                }
+            }
+        }
+
+        return counts;
+    }
+
+    // Helper: Determines if a cell type is one of the Hogwarts houses.
+    private bool IsHouseCell(GameOfLifeCellType type)
+    {
+        return type == GameOfLifeCellType.GRYFFINDOR ||
+               type == GameOfLifeCellType.SLYTHERIN ||
+               type == GameOfLifeCellType.HUFFLEPUFF ||
+               type == GameOfLifeCellType.RAVENCLAW;
+    }
+
+    // Helper: For a Dumbledore cell, attempt to revive neighboring dead cells.
+    // For each dead neighbor, with a 50% chance, spawn a random Hogwarts house.
+    private void ReviveDeadNeighbors(int x, int y)
+    {
+        Vector2Int[] neighborOffsets = new Vector2Int[]
+        {
+            new Vector2Int(-1,  1), new Vector2Int(0,  1), new Vector2Int(1,  1),
+            new Vector2Int(-1,  0),                      new Vector2Int(1,  0),
+            new Vector2Int(-1, -1), new Vector2Int(0, -1), new Vector2Int(1, -1)
+        };
+
+        // Array of Hogwarts house types for random selection.
+        GameOfLifeCellType[] houseTypes = new GameOfLifeCellType[]
+        {
+            GameOfLifeCellType.GRYFFINDOR,
+            GameOfLifeCellType.SLYTHERIN,
+            GameOfLifeCellType.HUFFLEPUFF,
+            GameOfLifeCellType.RAVENCLAW
+        };
+
+        foreach (Vector2Int offset in neighborOffsets)
+        {
+            int nx = x + offset.x;
+            int ny = y + offset.y;
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height)
+            {
+                // Revive only if the neighbor is currently dead.
+                if (currentGenerationGrid[nx, ny].Type == GameOfLifeCellType.DEAD)
+                {
+                    if (UnityEngine.Random.value < 0.5f)
+                    {
+                        // Choose a random house type.
+                        GameOfLifeCellType revivedType = houseTypes[UnityEngine.Random.Range(0, houseTypes.Length)];
+                        // Directly update the next generation grid for the neighbor.
+                        nextGenerationGrid[nx, ny] = new CellInfoOnMap
+                        {
+                            GridPosition = new Vector2Int(nx, ny),
+                            Type = revivedType
+                        };
+                    }
+                }
+            }
+        }
+    }
+
+    // Helper: For a Voldemort cell, transform any neighboring Hogwarts house cell (except Slytherin) into Voldemort.
+    private void TransformHogwartsNeighbors(int x, int y)
+    {
+        Vector2Int[] neighborOffsets = new Vector2Int[]
+        {
+            new Vector2Int(-1,  1), new Vector2Int(0,  1), new Vector2Int(1,  1),
+            new Vector2Int(-1,  0),                      new Vector2Int(1,  0),
+            new Vector2Int(-1, -1), new Vector2Int(0, -1), new Vector2Int(1, -1)
+        };
+
+        foreach (Vector2Int offset in neighborOffsets)
+        {
+            int nx = x + offset.x;
+            int ny = y + offset.y;
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height)
+            {
+                GameOfLifeCellType neighborType = currentGenerationGrid[nx, ny].Type;
+                // Transform if the neighbor is a Hogwarts house (but not Slytherin) and not already Voldemort.
+                if (IsHouseCell(neighborType) && neighborType != GameOfLifeCellType.SLYTHERIN)
+                {
+                    nextGenerationGrid[nx, ny] = new CellInfoOnMap
+                    {
+                        GridPosition = new Vector2Int(nx, ny),
+                        Type = GameOfLifeCellType.VOLDEMORT
+                    };
+                }
             }
         }
     }
