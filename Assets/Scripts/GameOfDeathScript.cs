@@ -589,4 +589,38 @@ public class GameOfDeath : MonoBehaviour
             }
         }
     }
+    /// <summary>
+    /// Special rules for specific regions of the grid. *In progress*
+    /// </summary>
+    private Dictionary<string, (Vector2Int start, Vector2Int end, GameOfLifeRule rule)> specialRegions;
+    private void InitializeSpecialRegions()
+    {
+        specialRegions = new Dictionary<string, (Vector2Int, Vector2Int, GameOfLifeRule)>
+        {
+            { "Slytherin Dormitory", (new Vector2Int(0, 0), new Vector2Int(5, 5), new GameOfLifeRule { surviveMin = 2, surviveMax = 3, birth = 3 }) },
+            { "Dumbledore's Office", (new Vector2Int(6, 6), new Vector2Int(9, 9), new GameOfLifeRule { surviveMin = 1, surviveMax = 4, birth = 2 }) }
+        };
+    }
+    private GameOfLifeRule GetRuleForPosition(int x, int y)
+    {
+        foreach (var region in specialRegions)
+        {
+            Vector2Int start = region.Value.start;
+            Vector2Int end = region.Value.end;
+
+            if (x >= start.x && x <= end.x && y >= start.y && y <= end.y)
+            {
+                return region.Value.rule;
+            }
+        }
+
+        // Default rule
+        return new GameOfLifeRule { surviveMin = 2, surviveMax = 3, birth = 3 };
+    }
+}
+public class GameOfLifeRule
+{
+    public int surviveMin;
+    public int surviveMax;
+    public int birth;
 }
