@@ -54,18 +54,18 @@ public class Timer : MonoBehaviour
             lastInGameClockUpdate = gameTimer;
         }
 
-        Debug.Log("In-game Time: " + gameTimer);
+        //Debug.Log("In-game Time: " + gameTimer);
     }
 
     void UpdateCells()
     {
-        Debug.Log("Updating cells at: " + gameTimer + " seconds.");
+        //Debug.Log("Updating cells at: " + gameTimer + " seconds.");
         // Add cell update function
     }
 
     void UpdateInGameClock()
     {
-        Debug.Log("Updating in-game clock at: " + gameTimer + " seconds.");
+        //Debug.Log("Updating in-game clock at: " + gameTimer + " seconds.");
         // Add function to display in-game clock function
     }
 }

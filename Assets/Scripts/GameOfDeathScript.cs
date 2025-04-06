@@ -3,15 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using GameOfLife.CellSystem;
-
 public class GameOfDeath : MonoBehaviour
 {
     [Header("Grid settings")]
     public int width = 48;
     public int height = 24;
-
     private int cellSize = 1920 / 48;
-
     [Header("Cells Prefabs settings")]
     public GameObject gryffindorPrefab;
     public GameObject slytherinPrefab;
@@ -19,26 +16,23 @@ public class GameOfDeath : MonoBehaviour
     public GameObject ravenclawPrefab;
     public GameObject volandemortPrefab;
     public GameObject dubledorePrefab;
-
     [Header("UI References")]
     public Canvas gameCanvas;
     public RectTransform cellContainer;
-
     [Header("Grid Positioning")]
     public Vector2 gridOffset = Vector2.zero;
     public bool centerGridInContainer = true;
-
     [Header("Random Generation Settings")]
     [Range(0f, 1f)]
     public float initialFillPercentage = 0.3f;
-
+    [Header("Zones references")]
+    public Zone slytherinZone;
+    public Zone dumbledoreZone;
     private CellInfoOnMap[,] currentGenerationGrid;
     private CellInfoOnMap[,] nextGenerationGrid;
-
     private Dictionary<GameOfLifeCellType, GameObject> prefabMap;
     private Vector2 cellSpacing;
     private Vector2 gridStartPosition;
-
     void Start()
     {
         if (gameCanvas == null)
@@ -46,11 +40,16 @@ public class GameOfDeath : MonoBehaviour
             Debug.LogError("Canvas reference is missing! Please assign a canvas in the inspector.");
             return;
         }
-
         if (cellContainer == null)
         {
             cellContainer = gameCanvas.GetComponent<RectTransform>();
             Debug.Log("Cell container not assigned, using canvas as container.");
+        }
+
+        // Check if zones are assigned
+        if (slytherinZone == null || dumbledoreZone == null)
+        {
+            Debug.LogError("Zone references are missing! Please assign zones in the inspector.");
         }
 
         prefabMap = new Dictionary<GameOfLifeCellType, GameObject>
@@ -62,24 +61,42 @@ public class GameOfDeath : MonoBehaviour
             { GameOfLifeCellType.DUMBLEDORE, dubledorePrefab },
             { GameOfLifeCellType.VOLDEMORT, volandemortPrefab }
         };
-
         CalculateGridPositioning();
         InitializeGrid();
         PopulateRandomCells();
     }
 
+ 
     void Update()
     {
         if (Input.GetMouseButtonDown(0))
         {
             Vector2 mousePosition = Input.mousePosition;
             CellInfoOnMap clickedCell = GetCellByCoordinates(mousePosition.x, mousePosition.y);
-
             if (clickedCell != null)
             {
                 Vector2Int cellPosition = clickedCell.GridPosition;
-                Debug.Log($"Cell clicked at grid position: ({cellPosition.x}, {cellPosition.y})");
-                Debug.Log($"Cell type: {clickedCell.Type}");
+                //Debug.Log($"Cell clicked at grid position: ({cellPosition.x}, {cellPosition.y})");
+                //Debug.Log($"Cell type: {clickedCell.Type}");
+                //Debug.Log($"Cell zone: {clickedCell.CurrentZone}");
+
+                Zone calculatedZone = CalculateZoneCellIn(cellPosition.x, cellPosition.y);
+                //Debug.Log($"Calculated zone for this position: {calculatedZone.ToString()}");
+
+                // Check if Slytherin zone contains this cell
+                if (slytherinZone != null)
+                {
+                    bool inSlytherin = slytherinZone.IsInZone(cellPosition.x, cellPosition.y);
+                    Debug.Log(slytherinZone.TopLeftCell.ToString() + " " + slytherinZone.BottomRightCell.ToString());
+                    //Debug.Log($"Slytherin zone contains this cell: {inSlytherin}");
+                }
+
+                // Check if Dumbledore zone contains this cell
+                if (dumbledoreZone != null)
+                {
+                    bool inDumbledore = dumbledoreZone.IsInZone(cellPosition.x, cellPosition.y);
+                    //Debug.Log($"Dumbledore zone contains this cell: {inDumbledore}");
+                }
 
                 if (clickedCell.Type == GameOfLifeCellType.DEAD)
                 {
@@ -96,56 +113,61 @@ public class GameOfDeath : MonoBehaviour
             }
         }
     }
-
     private Vector2Int GetCellIndexesByCoordinates(float x, float y)
     {
         // Screen coordinates: (0,1080) top-left, (1920,0) bottom-right
         // There are 27 cells in height and 48 cells in width
         // each cell is 40*40 pixels
-
         float gridWidth = width * cellSize;
         float gridHeight = height * cellSize;
-
         // Calculate screen-space position of grid based on centered placement
         float gridLeft = (1920f / 2) - (gridWidth / 2) + gridOffset.x;
         float gridTop = (1080f / 2) + (gridHeight / 2) + gridOffset.y; // Top edge NOT adjusted for cell size
-
         // Convert mouse position to grid-relative position
         float relativeX = x - gridLeft;
         float relativeY = gridTop - y; // Y decreases downward in screen space, so invert
-
         // Convert to grid indices
         int gridX = Mathf.FloorToInt(relativeX / cellSize);
         int gridY = Mathf.FloorToInt(relativeY / cellSize);
-
         // Check bounds
         if (gridX >= 0 && gridX < width && gridY >= 0 && gridY < height)
         {
             return new Vector2Int(gridX, gridY);
         }
-
         return new Vector2Int(-1, -1);
     }
-
     private CellInfoOnMap GetCellByCoordinates(float x, float y)
     {
         Vector2Int position = GetCellIndexesByCoordinates(x, y);
-
         if (position.x >= 0 && position.y >= 0 &&
             position.x < width && position.y < height)
         {
             return currentGenerationGrid[position.x, position.y];
         }
+        return null;
+    }
+    private Zone CalculateZoneCellIn(int x, int y)
+    {
+        // Verify zone objects are valid before checking
+        if (slytherinZone != null && slytherinZone.IsInZone(x, y))
+        {
+            return slytherinZone;
+        }
+
+        if (dumbledoreZone != null && dumbledoreZone.IsInZone(x, y))
+        {
+            return dumbledoreZone;
+        }
 
         return null;
     }
+
 
     private void CalculateGridPositioning()
     {
         cellSpacing = new Vector2(cellSize, cellSize);
         float totalGridWidth = width * cellSpacing.x;
         float totalGridHeight = height * cellSpacing.y;
-
         if (centerGridInContainer)
         {
             Vector2 containerSize = cellContainer.rect.size;
@@ -157,10 +179,8 @@ public class GameOfDeath : MonoBehaviour
         {
             gridStartPosition = gridOffset;
         }
-
         Debug.Log($"Grid positioning calculated. Start: {gridStartPosition}, Spacing: {cellSpacing}");
     }
-
     private void InitializeGrid()
     {
         currentGenerationGrid = new CellInfoOnMap[width, height];
@@ -168,14 +188,21 @@ public class GameOfDeath : MonoBehaviour
         {
             for (int y = 0; y < height; y++)
             {
+                Zone zoneType = CalculateZoneCellIn(x, y);
                 currentGenerationGrid[x, y] = new CellInfoOnMap
                 {
                     Type = GameOfLifeCellType.DEAD,
-                    GridPosition = new Vector2Int(x, y)
+                    GridPosition = new Vector2Int(x, y),
+                    CurrentZone = zoneType
                 };
+
+                // Debug for specific cells
+                if (x % 10 == 0 && y % 10 == 0)
+                {
+                    Debug.Log($"Cell ({x}, {y}) initialized with zone: {zoneType}");
+                }
             }
         }
-
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
@@ -184,13 +211,11 @@ public class GameOfDeath : MonoBehaviour
             }
         }
     }
-
     private void PopulateRandomCells()
     {
         System.Random random = new System.Random();
         int cellTypeCount = Enum.GetValues(typeof(GameOfLifeCellType)).Length - 1;
         int cellsToFill = Mathf.RoundToInt(width * height * initialFillPercentage);
-
         for (int i = 0; i < cellsToFill; i++)
         {
             int x = random.Next(0, width);
@@ -200,7 +225,6 @@ public class GameOfDeath : MonoBehaviour
             SpawnCell(x, y, randomType);
         }
     }
-
     private void SetupNeighbors(int x, int y)
     {
         CellInfoOnMap cell = currentGenerationGrid[x, y];
@@ -213,40 +237,36 @@ public class GameOfDeath : MonoBehaviour
         cell.BottomLeft = GetCellAt(x - 1, y - 1);
         cell.BottomRight = GetCellAt(x + 1, y - 1);
     }
-
     private CellInfoOnMap GetCellAt(int x, int y)
     {
         if (x < 0 || x >= width || y < 0 || y >= height)
             return null;
         return currentGenerationGrid[x, y];
     }
-
     public Vector2 CalculateCellPosition(int x, int y)
     {
         float posX = gridStartPosition.x + x * cellSpacing.x;
         float posY = gridStartPosition.y - y * cellSpacing.y; // Y decreases downward from top
         return new Vector2(posX, posY);
     }
-
     public void SpawnCell(int x, int y, GameOfLifeCellType type)
     {
         if (x < 0 || x >= width || y < 0 || y >= height)
             return;
-
         CellInfoOnMap cell = currentGenerationGrid[x, y];
-
         if (cell.Instance != null)
         {
             Destroy(cell.Instance);
         }
-
         cell.Type = type;
+
+        // Always recalculate the zone to ensure it's correct
+        cell.CurrentZone = CalculateZoneCellIn(x, y);
 
         if (type != GameOfLifeCellType.DEAD && prefabMap.ContainsKey(type))
         {
             Vector2 position = CalculateCellPosition(x, y);
             cell.Instance = Instantiate(prefabMap[type], cellContainer);
-
             RectTransform rectTransform = cell.Instance.GetComponent<RectTransform>();
             if (rectTransform != null)
             {
@@ -264,12 +284,10 @@ public class GameOfDeath : MonoBehaviour
             cell.Instance = null;
         }
     }
-
     private void OnDrawGizmos()
     {
         if (!Application.isPlaying)
             return;
-
         Gizmos.color = Color.yellow;
         for (int x = 0; x < width; x++)
         {
