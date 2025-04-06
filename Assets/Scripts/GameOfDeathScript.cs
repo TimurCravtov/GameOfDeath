@@ -100,7 +100,8 @@ public class GameOfDeath : MonoBehaviour
     private Vector2Int GetCellIndexesByCoordinates(float x, float y)
     {
         // Screen coordinates: (0,1080) top-left, (1920,0) bottom-right
-        // Grid coordinates: (0,0) top-left, (47,23) bottom-right (after flip)
+        // There are 27 cells in height and 48 cells in width
+        // each cell is 40*40 pixels
 
         float gridWidth = width * cellSize;
         float gridHeight = height * cellSize;
