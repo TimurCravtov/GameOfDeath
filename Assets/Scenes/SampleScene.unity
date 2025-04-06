@@ -581,6 +581,8 @@ MonoBehaviour:
   gridOffset: {x: 0, y: 0}
   centerGridInContainer: 1
   initialFillPercentage: 0.242
+  slytherinZone: {fileID: 928490467}
+  dumbledoreZone: {fileID: 720486730}
 --- !u!1 &862190135
 GameObject:
   m_ObjectHideFlags: 0
@@ -932,7 +934,7 @@ AudioSource:
   m_audioClip: {fileID: 8300000, guid: 334601d26298fcd469a09a3347c19b5a, type: 3}
   m_Resource: {fileID: 8300000, guid: 334601d26298fcd469a09a3347c19b5a, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 0.1
+  m_Volume: 0
   m_Pitch: 1
   Loop: 1
   Mute: 0
