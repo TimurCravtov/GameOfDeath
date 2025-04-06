@@ -457,8 +457,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   test: 
   Name: Dumbledore office
-  TopLeft: {x: 1160, y: 960}
-  BottomRight: {x: 1760, y: 400}
+  TopLeftCell: {x: 29, y: 3}
+  BottomRightCell: {x: 43, y: 16}
 --- !u!224 &720486731
 RectTransform:
   m_ObjectHideFlags: 0
@@ -748,8 +748,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   test: 
   Name: Slytherin Dormitory
-  TopLeft: {x: 120, y: 720}
-  BottomRight: {x: 960, y: 200}
+  TopLeftCell: {x: 3, y: 9}
+  BottomRightCell: {x: 23, y: 21}
 --- !u!1 &1439448270
 GameObject:
   m_ObjectHideFlags: 0
