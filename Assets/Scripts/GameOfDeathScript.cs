@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using GameOfLife.CellSystem;
 using System.Data;
+using System.Linq;
 
 public class GameOfDeath : MonoBehaviour
 {
@@ -68,10 +69,10 @@ public class GameOfDeath : MonoBehaviour
         InitializeGrid();
         PopulateRandomCells();
     }
-
+    public float updateInterval = 0.5f; // Time between generations (in seconds)
+    private float timer = 0f;
     void Update()
     {
-
         // Check for reset key press
         if (Input.GetKeyDown(KeyCode.R))
         {
@@ -87,7 +88,20 @@ public class GameOfDeath : MonoBehaviour
         }
         if (startSimulation)
         {
-            UpdateGeneration();
+            timer += Time.deltaTime;
+
+            if (timer >= updateInterval)
+            {
+                UpdateGeneration();
+                timer = 0f;
+            }
+
+            // Optional: Control speed with keys
+            if (Input.GetKeyDown(KeyCode.UpArrow))
+                updateInterval = Mathf.Max(0.01f, updateInterval - 0.1f);
+
+            if (Input.GetKeyDown(KeyCode.DownArrow))
+                updateInterval += 0.1f;
         }
         else {
             // Check for mouse click
@@ -100,7 +114,6 @@ public class GameOfDeath : MonoBehaviour
                 {
                     Vector2Int cellPosition = clickedCell.GridPosition;
                     Debug.Log($"Cell clicked at grid position: ({cellPosition.x}, {cellPosition.y})");
-                    Debug.Log($"Cell type: {clickedCell.Type}");
 
                     // Spawn the selected cell type based on the key press
                     if (Input.GetKey(KeyCode.Alpha1))
@@ -131,7 +144,6 @@ public class GameOfDeath : MonoBehaviour
                 }
             }
             if (Input.GetMouseButtonDown(1)) {
-                Debug.Log("Click detected");
                 Vector2 mousePosition = Input.mousePosition;
                 CellInfoOnMap clickedCell = GetCellByCoordinates(mousePosition.x, mousePosition.y);
                 Vector2Int cellPosition = clickedCell.GridPosition;
@@ -316,7 +328,6 @@ public class GameOfDeath : MonoBehaviour
         }
         else
         {
-            Debug.Log("Null instance");
             currentGenerationGrid[x, y].Instance = null;
         }
     }
@@ -337,6 +348,10 @@ public class GameOfDeath : MonoBehaviour
                 Gizmos.DrawWireCube(worldPos, new Vector3(cellSize * 0.9f, cellSize * 0.9f, 0.01f));
             }
         }
+    }
+    bool isSlytherinDormitory(int x, int y)
+    {
+        return x >= 3 && x <= 22 && y >= 10 && y <= 20;
     }
     // Call this every simulation cycle to compute the next generation.
     private void UpdateGeneration()
@@ -364,9 +379,59 @@ public class GameOfDeath : MonoBehaviour
 
                 // Count neighbors for this cell
                 Dictionary<GameOfLifeCellType, int> neighborCount = CountNeighbors(x, y);
+                // --- Overcrowding death rule ---
+                int totalLivingNeighbors = 0;
+                foreach (var kv in neighborCount)
+                {
+                    if (kv.Key != GameOfLifeCellType.DEAD)
+                        totalLivingNeighbors += kv.Value;
+                }
+                if (totalLivingNeighbors > 6 && currentCell.Type != GameOfLifeCellType.DEAD)
+                {
+                    newCell.Type = GameOfLifeCellType.DEAD;
+                    nextGenerationGrid[x, y] = newCell;
+                    continue; // Skip other rules for this cell
+                }
+                if (isSlytherinDormitory(x, y))
+                {
+                    switch (currentCell.Type)
+                    {
+                        case GameOfLifeCellType.SLYTHERIN:
+                            // Slytherins thrive here — can't die in their own dorm
+                            newCell.Type = GameOfLifeCellType.SLYTHERIN;
+                            break;
 
+                        case GameOfLifeCellType.GRYFFINDOR:
+                            // Gryffindors are not welcome — they die
+                            newCell.Type = GameOfLifeCellType.DEAD;
+                            break;
+
+                        case GameOfLifeCellType.HUFFLEPUFF:
+                        case GameOfLifeCellType.RAVENCLAW:
+                            // No resurrection for non-Slytherins in this dark environment
+                            // Just let them stay dead or follow normal dead rules
+                            break;
+
+                        case GameOfLifeCellType.DUMBLEDORE:
+                            // Dumbledore can't survive in this hostile region
+                            newCell.Type = GameOfLifeCellType.DEAD;
+                            break;
+
+                        case GameOfLifeCellType.VOLDEMORT:
+                            // Voldemort is strengthened — convert neighbors
+                            TransformHogwartsNeighbors(x, y);
+                            newCell.Type = GameOfLifeCellType.VOLDEMORT;
+                            break;
+
+                        case GameOfLifeCellType.DEAD:
+                            // Resurrection not possible in Slytherin dormitory
+                            break;
+                    }
+                    nextGenerationGrid[x, y] = newCell;
+                    continue;
+                }
                 // --- Hogwarts House Cells Rules ---
-                if (IsHouseCell(currentCell.Type))
+                else if (IsHouseCell(currentCell.Type))
                 {
                     // Survival rule: if 2-3 same house neighbors, cell survives.
                     int sameHouse = neighborCount.ContainsKey(currentCell.Type) ? neighborCount[currentCell.Type] : 0;
@@ -450,13 +515,23 @@ public class GameOfDeath : MonoBehaviour
                 // --- Revival for Dead Cells via Ravenclaw/Hufflepuff Interaction ---
                 else if (currentCell.Type == GameOfLifeCellType.DEAD)
                 {
-                    int ravenCount = neighborCount.ContainsKey(GameOfLifeCellType.RAVENCLAW) ? neighborCount[GameOfLifeCellType.RAVENCLAW] : 0;
-                    int huffleCount = neighborCount.ContainsKey(GameOfLifeCellType.HUFFLEPUFF) ? neighborCount[GameOfLifeCellType.HUFFLEPUFF] : 0;
-                    if (ravenCount > 0 && huffleCount > 0 && UnityEngine.Random.value < 0.3f)
+                    int totalNeighbors = neighborCount.Count;
+                    // Reproduction rule: exactly 3 neighbors causes birth
+                    if (totalNeighbors == 3)
                     {
-                        newCell.Type = GameOfLifeCellType.RAVENCLAW;
+                        // Find the most common house type among neighbors
+                        var houseCounts = neighborCount
+                            .Where(kv => IsHouseCell(kv.Key))
+                            .OrderByDescending(kv => kv.Value)
+                            .ToList();
+                        Debug.Log(houseCounts);
+                        if (houseCounts.Count > 0)
+                        {
+                            newCell.Type = houseCounts[0].Key;
+                        }
                     }
                 }
+
 
                 // Assign the new cell into the next generation grid.
                 nextGenerationGrid[x, y] = newCell;
@@ -589,6 +664,8 @@ public class GameOfDeath : MonoBehaviour
             }
         }
     }
+
+
     /// <summary>
     /// Special rules for specific regions of the grid. *In progress*
     /// </summary>
