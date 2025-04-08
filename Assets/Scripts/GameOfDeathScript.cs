@@ -103,7 +103,8 @@ public class GameOfDeath : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.DownArrow))
                 updateInterval += 0.1f;
         }
-        else {
+        else
+        {
             // Check for mouse click
             if (Input.GetMouseButtonDown(0))
             {
@@ -143,7 +144,8 @@ public class GameOfDeath : MonoBehaviour
                     Debug.Log("Click detected outside the grid area");
                 }
             }
-            if (Input.GetMouseButtonDown(1)) {
+            if (Input.GetMouseButtonDown(1))
+            {
                 Vector2 mousePosition = Input.mousePosition;
                 CellInfoOnMap clickedCell = GetCellByCoordinates(mousePosition.x, mousePosition.y);
                 Vector2Int cellPosition = clickedCell.GridPosition;
@@ -298,7 +300,8 @@ public class GameOfDeath : MonoBehaviour
     {
         if (x < 0 || x >= width || y < 0 || y >= height)
             return;
-        if (currentGenerationGrid[x, y].Instance != null) {
+        if (currentGenerationGrid[x, y].Instance != null)
+        {
             Destroy(currentGenerationGrid[x, y].Instance);
             currentGenerationGrid[x, y].Instance = null;
         }
@@ -353,6 +356,10 @@ public class GameOfDeath : MonoBehaviour
     {
         return x >= 3 && x <= 22 && y >= 10 && y <= 20;
     }
+    bool isDumbledoreOffice(int x, int y)
+    {
+        return x >= 29 && x <= 43 && y >= 4 && y <= 16;
+    }
     // Call this every simulation cycle to compute the next generation.
     private void UpdateGeneration()
     {
@@ -397,23 +404,20 @@ public class GameOfDeath : MonoBehaviour
                     switch (currentCell.Type)
                     {
                         case GameOfLifeCellType.SLYTHERIN:
-                            // Slytherins thrive here — can't die in their own dorm
                             newCell.Type = GameOfLifeCellType.SLYTHERIN;
                             break;
 
                         case GameOfLifeCellType.GRYFFINDOR:
-                            // Gryffindors are not welcome — they die
+                            // Gryffindors die
                             newCell.Type = GameOfLifeCellType.DEAD;
                             break;
 
                         case GameOfLifeCellType.HUFFLEPUFF:
                         case GameOfLifeCellType.RAVENCLAW:
-                            // No resurrection for non-Slytherins in this dark environment
-                            // Just let them stay dead or follow normal dead rules
                             break;
 
                         case GameOfLifeCellType.DUMBLEDORE:
-                            // Dumbledore can't survive in this hostile region
+                            // Dumbledore can't survive in this region
                             newCell.Type = GameOfLifeCellType.DEAD;
                             break;
 
@@ -424,7 +428,70 @@ public class GameOfDeath : MonoBehaviour
                             break;
 
                         case GameOfLifeCellType.DEAD:
-                            // Resurrection not possible in Slytherin dormitory
+                            // Resurrection is diminished in Slytherin dormitory
+                            int totalNeighbors = neighborCount.Count;
+                            // Reproduction rule: exactly 4 neighbors causes birth
+                            if (totalNeighbors == 4)
+                            {
+                                // Find the most common house type among neighbors
+                                var houseCounts = neighborCount
+                                    .Where(kv => IsHouseCell(kv.Key))
+                                    .OrderByDescending(kv => kv.Value)
+                                    .ToList();
+                                if (houseCounts.Count > 0)
+                                {
+                                    newCell.Type = houseCounts[0].Key;
+                                }
+                            }
+                            break;
+                    }
+                    nextGenerationGrid[x, y] = newCell;
+                    continue;
+                }
+                else if (isDumbledoreOffice(x, y))
+                {
+                    switch (currentCell.Type)
+                    {
+                        case GameOfLifeCellType.SLYTHERIN:
+                            newCell.Type = GameOfLifeCellType.SLYTHERIN;  // Slytherin survives
+                            break;
+
+                        case GameOfLifeCellType.GRYFFINDOR:
+                            newCell.Type = GameOfLifeCellType.DEAD;  // Gryffindors die
+                            break;
+
+                        case GameOfLifeCellType.HUFFLEPUFF:
+                            newCell.Type = GameOfLifeCellType.HUFFLEPUFF;  // Hufflepuff survives
+                            break;
+
+                        case GameOfLifeCellType.RAVENCLAW:
+                            newCell.Type = GameOfLifeCellType.RAVENCLAW;  // Ravenclaw survives
+                            break;
+
+                        case GameOfLifeCellType.DUMBLEDORE:
+                            newCell.Type = GameOfLifeCellType.DUMBLEDORE;  // Dumbledore remains
+                            break;
+
+                        case GameOfLifeCellType.VOLDEMORT:
+                            TransformHogwartsNeighbors(x, y);  // Voldemort transforms neighbors
+                            newCell.Type = GameOfLifeCellType.VOLDEMORT;  // Voldemort remains
+                            break;
+
+                        case GameOfLifeCellType.DEAD:
+                            // Resurrection is improved in Dumbeldore Office
+                            int totalNeighbors = neighborCount.Count;
+                            // Reproduction rule: 2 neighbors causes birth
+                            if (totalNeighbors == 2)
+                            {
+                                var houseCounts = neighborCount
+                                    .Where(kv => IsHouseCell(kv.Key))
+                                    .OrderByDescending(kv => kv.Value)
+                                    .ToList();
+                                if (houseCounts.Count > 0)
+                                {
+                                    newCell.Type = houseCounts[0].Key;
+                                }
+                            }
                             break;
                     }
                     nextGenerationGrid[x, y] = newCell;
@@ -512,21 +579,23 @@ public class GameOfDeath : MonoBehaviour
                         TransformHogwartsNeighbors(x, y);
                     }
                 }
-                // --- Revival for Dead Cells via Ravenclaw/Hufflepuff Interaction ---
                 else if (currentCell.Type == GameOfLifeCellType.DEAD)
                 {
                     int totalNeighbors = neighborCount.Count;
                     // Reproduction rule: exactly 3 neighbors causes birth
                     if (totalNeighbors == 3)
                     {
-                        // Find the most common house type among neighbors
+                        // Find the most common type among neighbors
                         var houseCounts = neighborCount
-                            .Where(kv => IsHouseCell(kv.Key))
+                            .Where(kv => kv.Key != GameOfLifeCellType.DEAD)
                             .OrderByDescending(kv => kv.Value)
                             .ToList();
-                        Debug.Log(houseCounts);
                         if (houseCounts.Count > 0)
                         {
+                            Debug.Log(houseCounts[0].Key);
+                            if (houseCounts.Count >= 3)
+                                Debug.Log(houseCounts.Count);
+
                             newCell.Type = houseCounts[0].Key;
                         }
                     }
@@ -664,40 +733,4 @@ public class GameOfDeath : MonoBehaviour
             }
         }
     }
-
-
-    /// <summary>
-    /// Special rules for specific regions of the grid. *In progress*
-    /// </summary>
-    private Dictionary<string, (Vector2Int start, Vector2Int end, GameOfLifeRule rule)> specialRegions;
-    private void InitializeSpecialRegions()
-    {
-        specialRegions = new Dictionary<string, (Vector2Int, Vector2Int, GameOfLifeRule)>
-        {
-            { "Slytherin Dormitory", (new Vector2Int(0, 0), new Vector2Int(5, 5), new GameOfLifeRule { surviveMin = 2, surviveMax = 3, birth = 3 }) },
-            { "Dumbledore's Office", (new Vector2Int(6, 6), new Vector2Int(9, 9), new GameOfLifeRule { surviveMin = 1, surviveMax = 4, birth = 2 }) }
-        };
-    }
-    private GameOfLifeRule GetRuleForPosition(int x, int y)
-    {
-        foreach (var region in specialRegions)
-        {
-            Vector2Int start = region.Value.start;
-            Vector2Int end = region.Value.end;
-
-            if (x >= start.x && x <= end.x && y >= start.y && y <= end.y)
-            {
-                return region.Value.rule;
-            }
-        }
-
-        // Default rule
-        return new GameOfLifeRule { surviveMin = 2, surviveMax = 3, birth = 3 };
-    }
-}
-public class GameOfLifeRule
-{
-    public int surviveMin;
-    public int surviveMax;
-    public int birth;
 }
