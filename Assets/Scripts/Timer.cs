@@ -33,6 +33,11 @@ public class Timer : MonoBehaviour
         Debug.Log($"Increased interval: {timerInterval}");
     }
 
+    public void SetGamePase(float speed) 
+    {
+        timerInterval = Mathf.Max(Mathf.Min(speed, 3f), 0.5f ) ;
+    }
+
     public void DecreaseInterval()
     {
         timerInterval = Mathf.Max(timerInterval - 0.5f, 0.5f);

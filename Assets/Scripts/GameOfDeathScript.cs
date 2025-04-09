@@ -43,7 +43,7 @@ public class GameOfDeath : MonoBehaviour
     private Dictionary<GameOfLifeCellType, GameObject> prefabMap;
     private Vector2 cellSpacing;
     private Vector2 gridStartPosition;
-    private bool startSimulation = false;
+    public bool startSimulation = false;
         
    
 
@@ -79,6 +79,30 @@ public class GameOfDeath : MonoBehaviour
         CalculateGridPositioning();
         InitializeGrid();
     }
+
+    public void TriggerResetWithRandom() 
+    {
+        clearGrid();
+        currentGenerationGrid = null;
+        nextGenerationGrid = null;
+
+        Start();
+        PopulateRandomCells();
+
+        startSimulation = false;
+    }
+    
+    public void TriggerResetWithoutRandom() 
+    {
+        clearGrid();
+        currentGenerationGrid = null;
+        nextGenerationGrid = null;
+
+        Start();
+
+        startSimulation = false;
+    }
+
     void Update()
     {
         // Check for reset key press
