@@ -4,30 +4,39 @@ using UnityEngine.UI;
 
 public class HandleState : MonoBehaviour
 {
-    public GameOfDeath gameState; // Make sure to assign this in the Inspector
+    public GameOfDeath gameState;
     public Button button;
     public TextMeshProUGUI buttonText;
 
+    public Sprite startSprite;
+    public Sprite resumeSprite;
+
+    private Image buttonImage; // <-- No need to assign in inspector
+
     public void Start()
     {
-        UpdateButtonText(); // Set initial button text
+        // Get the Image component attached to the Button GameObject
+        buttonImage = button.GetComponent<Image>();
+        UpdateButtonVisuals();
     }
 
     public void HandleClick()
     {
         gameState.startSimulation = !gameState.startSimulation;
-        UpdateButtonText();
+        UpdateButtonVisuals();
     }
 
-    public void UpdateButtonText()
+    public void UpdateButtonVisuals()
     {
         if (gameState.startSimulation)
         {
-            buttonText.text = "Resume";
+            //buttonText.text = "Resume";
+            buttonImage.sprite = startSprite;
         }
         else
         {
-            buttonText.text = "Start";
+            buttonImage.sprite = resumeSprite;
+            //buttonText.text = "Start";
         }
     }
 }
