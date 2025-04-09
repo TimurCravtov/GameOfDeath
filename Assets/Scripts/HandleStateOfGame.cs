@@ -12,12 +12,25 @@ public class HandleState : MonoBehaviour
     public Sprite resumeSprite;
 
     private Image buttonImage; // <-- No need to assign in inspector
+    private bool previousSimulationState;
+
 
     public void Start()
     {
         // Get the Image component attached to the Button GameObject
         buttonImage = button.GetComponent<Image>();
+        previousSimulationState = gameState.startSimulation;
         UpdateButtonVisuals();
+    }
+
+    private void Update()
+    {
+        // Detect changes in game state (e.g., from key press elsewhere)
+        if (previousSimulationState != gameState.startSimulation)
+        {
+            UpdateButtonVisuals();
+            previousSimulationState = gameState.startSimulation;
+        }
     }
 
     public void HandleClick()
