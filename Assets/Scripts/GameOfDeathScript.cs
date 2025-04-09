@@ -83,8 +83,8 @@ public class GameOfDeath : MonoBehaviour
     public void TriggerResetWithRandom() 
     {
         clearGrid();
-        currentGenerationGrid = null;
-        nextGenerationGrid = null;
+        currentGenerationGrid = new CellInfoOnMap[width, height];
+        nextGenerationGrid = new CellInfoOnMap[width, height];
 
         Start();
         PopulateRandomCells();
@@ -95,8 +95,8 @@ public class GameOfDeath : MonoBehaviour
     public void TriggerResetWithoutRandom() 
     {
         clearGrid();
-        currentGenerationGrid = null;
-        nextGenerationGrid = null;
+        currentGenerationGrid = new CellInfoOnMap[width, height];
+        nextGenerationGrid = new CellInfoOnMap[width, height];
 
         Start();
 
@@ -109,8 +109,8 @@ public class GameOfDeath : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.R))
         {
             clearGrid();
-            currentGenerationGrid = null;
-            nextGenerationGrid = null;
+            currentGenerationGrid = new CellInfoOnMap[width, height];
+            nextGenerationGrid = new CellInfoOnMap[width, height];
 
             Start();
             PopulateRandomCells();
@@ -120,8 +120,8 @@ public class GameOfDeath : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.C))
         {
             clearGrid();
-            currentGenerationGrid = null;
-            nextGenerationGrid = null;
+            currentGenerationGrid = new CellInfoOnMap[width, height];
+            nextGenerationGrid = new CellInfoOnMap[width, height];
 
             Start();
 
