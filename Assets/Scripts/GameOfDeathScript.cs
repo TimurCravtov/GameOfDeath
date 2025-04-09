@@ -457,7 +457,7 @@ public class GameOfDeath : MonoBehaviour
                     if (kv.Key != GameOfLifeCellType.DEAD)
                         totalLivingNeighbors += kv.Value;
                 }
-                if (totalLivingNeighbors > 5 || totalLivingNeighbors < 2 && currentCell.Type != GameOfLifeCellType.DEAD)
+                if (totalLivingNeighbors >= 5 || totalLivingNeighbors < 2 && currentCell.Type != GameOfLifeCellType.DEAD)
                 {
                     newCell.Type = GameOfLifeCellType.DEAD;
                     nextGenerationGrid[x, y] = newCell;
@@ -517,11 +517,10 @@ public class GameOfDeath : MonoBehaviour
                     switch (currentCell.Type)
                     {
                         case GameOfLifeCellType.SLYTHERIN:
-                            newCell.Type = GameOfLifeCellType.SLYTHERIN;  // Slytherin survives
+                            newCell.Type = GameOfLifeCellType.DEAD;  // Slytherin dies
                             break;
 
                         case GameOfLifeCellType.GRYFFINDOR:
-                            newCell.Type = GameOfLifeCellType.DEAD;  // Gryffindors die
                             break;
 
                         case GameOfLifeCellType.HUFFLEPUFF:
@@ -548,7 +547,7 @@ public class GameOfDeath : MonoBehaviour
                             if (totalNeighbors == 2)
                             {
                                 var houseCounts = neighborCount
-                                    .Where(kv => IsHouseCell(kv.Key))
+                                    .Where(kv => IsHouseCell(kv.Key) && kv.Key != GameOfLifeCellType.SLYTHERIN)
                                     .OrderByDescending(kv => kv.Value)
                                     .ToList();
                                 if (houseCounts.Count > 0)
@@ -656,7 +655,6 @@ public class GameOfDeath : MonoBehaviour
                             .ToList();
                         if (houseCounts.Count > 0)
                         {
-
                             newCell.Type = houseCounts[0].Key;
                         }
                     }
