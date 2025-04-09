@@ -107,8 +107,6 @@ Every cell belongs to a Hogwarts house or legendary figure. Evolution follows ma
 ---
 
 ## **🗂️ File Structure**
-
-From your Unity project:
 ```
 Assets/
 ├── Resources/
