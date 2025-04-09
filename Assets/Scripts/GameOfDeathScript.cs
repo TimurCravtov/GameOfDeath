@@ -12,6 +12,7 @@ public class GameOfDeath : MonoBehaviour
     public int width = 48;
     public int height = 24;
     private int cellSize = 1920 / 48;
+
     [Header("Cells Prefabs settings")]
     public GameObject gryffindorPrefab;
     public GameObject slytherinPrefab;
@@ -19,15 +20,21 @@ public class GameOfDeath : MonoBehaviour
     public GameObject ravenclawPrefab;
     public GameObject volandemortPrefab;
     public GameObject dubledorePrefab;
+
     [Header("UI References")]
     public Canvas gameCanvas;
     public RectTransform cellContainer;
+
     [Header("Grid Positioning")]
     public Vector2 gridOffset = Vector2.zero;
     public bool centerGridInContainer = true;
     [Header("Random Generation Settings")]
+
+
     [Range(0f, 1f)]
     public float initialFillPercentage = 0.3f;
+    public Timer timer; 
+
     [Header("Zones references")]
     public Zone slytherinZone;
     public Zone dumbledoreZone;
@@ -37,6 +44,10 @@ public class GameOfDeath : MonoBehaviour
     private Vector2 cellSpacing;
     private Vector2 gridStartPosition;
     private bool startSimulation = false;
+        
+   
+
+
     void Start()
     {
         if (gameCanvas == null)
@@ -68,8 +79,6 @@ public class GameOfDeath : MonoBehaviour
         CalculateGridPositioning();
         InitializeGrid();
     }
-    public float updateInterval = 0.5f; // Time between generations (in seconds)
-    private float timer = 0f;
     void Update()
     {
         // Check for reset key press
@@ -100,20 +109,18 @@ public class GameOfDeath : MonoBehaviour
         }
         if (startSimulation)
         {
-            timer += Time.deltaTime;
 
-            if (timer >= updateInterval)
+            if (timer.IsTimeToUpdate())
             {
                 UpdateGeneration();
-                timer = 0f;
             }
 
             // Optional: Control speed with keys
             if (Input.GetKeyDown(KeyCode.UpArrow))
-                updateInterval = Mathf.Max(0.01f, updateInterval - 0.1f);
+                timer.IncreaseInterval();
 
             if (Input.GetKeyDown(KeyCode.DownArrow))
-                updateInterval += 0.1f;
+                timer.DecreaseInterval();
         }
         else
         {
@@ -386,11 +393,12 @@ public class GameOfDeath : MonoBehaviour
     }
     bool isSlytherinDormitory(int x, int y)
     {
-        return x >= 3 && x <= 22 && y >= 10 && y <= 20;
+        return slytherinZone.IsInZone(x, y);
+        //return x >= 3 && x <= 22 && y >= 10 && y <= 20;
     }
     bool isDumbledoreOffice(int x, int y)
     {
-        return x >= 29 && x <= 43 && y >= 4 && y <= 16;
+        return dumbledoreZone.IsInZone(x, y);
     }
     // Call this every simulation cycle to compute the next generation.
     private void UpdateGeneration()
@@ -454,7 +462,7 @@ public class GameOfDeath : MonoBehaviour
                             break;
 
                         case GameOfLifeCellType.VOLDEMORT:
-                            // Voldemort is strengthened — convert neighbors
+                            // Voldemort is strengthened ï¿½ convert neighbors
                             TransformHogwartsNeighbors(x, y);
                             newCell.Type = GameOfLifeCellType.VOLDEMORT;
                             break;
@@ -582,7 +590,7 @@ public class GameOfDeath : MonoBehaviour
                 {
                     int voldCount = neighborCount.ContainsKey(GameOfLifeCellType.VOLDEMORT) ? neighborCount[GameOfLifeCellType.VOLDEMORT] : 0;
                     int slythCount = neighborCount.ContainsKey(GameOfLifeCellType.SLYTHERIN) ? neighborCount[GameOfLifeCellType.SLYTHERIN] : 0;
-                    // Dumbledore dies if there’s any Voldemort or too many Slytherins.
+                    // Dumbledore dies if thereï¿½s any Voldemort or too many Slytherins.
                     if (voldCount >= 1 || slythCount > 5)
                     {
                         newCell.Type = GameOfLifeCellType.DEAD;

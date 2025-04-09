@@ -1,2 +1,21 @@
 fileFormatVersion: 2
 guid: dd318bfca8a13784c9915e4386c609e1
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - gryffindorPrefab: {fileID: 9135607183363620124, guid: 3a666941e5a20f64eba997634eda6ab9, type: 3}
+  - slytherinPrefab: {fileID: 2568649820691310699, guid: a3a89ae668e05844897841cd7610a0f9, type: 3}
+  - hufflepuffPrefab: {instanceID: 0}
+  - ravenclawPrefab: {instanceID: 0}
+  - volandemortPrefab: {instanceID: 0}
+  - dubledorePrefab: {instanceID: 0}
+  - gameCanvas: {instanceID: 0}
+  - cellContainer: {instanceID: 0}
+  - slytherinZone: {instanceID: 0}
+  - dumbledoreZone: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

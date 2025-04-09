@@ -2,70 +2,53 @@ using UnityEngine;
 
 public class Timer : MonoBehaviour
 {
-    private float startTime;
-    private float gameTimer; // time elapsed in game
+    [Range(0.5f, 3f)]
+    public float timerInterval = 1f;
 
-    public float cellUpdateInterval = 2f; // at which interval to update cells
-    private float lastCellUpdate;
+    private float lastUpdateTime = 0f;
+    private float gameTimer = 0f;
 
-    public float inGameClockUpdateInterval = 1f; // at whoch interval to update in-game clock
-    private float lastInGameClockUpdate;
-
-    private static bool isTimeToUpdate = false;
-
-    public static bool getTimeToUpdate()
-    {
-        return isTimeToUpdate;
-    }
-
-    public static void setTimeToUpdate(bool value)
-    {
-        isTimeToUpdate = value;
-    }
-
-
-
-
+    private bool _shouldUpdate = false;
 
     void Start()
     {
-        startTime = Time.time;
+        lastUpdateTime = 0f;
         gameTimer = 0f;
-        lastCellUpdate = 0f;
-        lastInGameClockUpdate = 0f;
     }
 
     void Update()
     {
-        if (isTimeToUpdate)
-        {
-            gameTimer = Time.time - startTime;
-        }
+        gameTimer = Time.time;
 
-        if (gameTimer - lastCellUpdate >= cellUpdateInterval)
+        if (gameTimer - lastUpdateTime >= timerInterval)
         {
-            UpdateCells();
-            lastCellUpdate = gameTimer;
+            lastUpdateTime = gameTimer;
+            _shouldUpdate = true;
         }
-
-        if (gameTimer - lastInGameClockUpdate >= inGameClockUpdateInterval)
-        {
-            UpdateInGameClock();
-            lastInGameClockUpdate = gameTimer;
-        }
-
-        //Debug.Log("In-game Time: " + gameTimer);
     }
 
-    void UpdateCells()
+    public void IncreaseInterval()
     {
-        //Debug.Log("Updating cells at: " + gameTimer + " seconds.");
-        // Add cell update function
+        timerInterval = Mathf.Min(timerInterval + 0.5f, 3f);
+        Debug.Log($"Increased interval: {timerInterval}");
     }
 
-    void UpdateInGameClock()
+    public void DecreaseInterval()
     {
-        //Debug.Log("Updating in-game clock at: " + gameTimer + " seconds.");
-        // Add function to display in-game clock function
+        timerInterval = Mathf.Max(timerInterval - 0.5f, 0.5f);
+        Debug.Log($"Decreased interval: {timerInterval}");
+    }
+
+    /// <summary>
+    /// Returns true only once per interval. Resets after returning true.
+    /// </summary>
+    public bool IsTimeToUpdate()
+    {
+        if (_shouldUpdate)
+        {
+            _shouldUpdate = false;
+            return true;
+        }
+        return false;
     }
 }
